@@ -21,15 +21,15 @@ def upgrade():
     op.add_column('videos', sa.Column('canonical_url', sa.String(), nullable=True))
     op.add_column('videos', sa.Column('created_at', sa.DateTime(), nullable=True))
     op.add_column('videos', sa.Column('duration', sa.Integer(), nullable=True))
-    op.add_column('videos', sa.Column('poster_url', sa.String(), nullable=True))
-    op.add_column('videos', sa.Column('video_url', sa.String(), nullable=True))
+    op.add_column('videos', sa.Column('poster_filename', sa.String(), nullable=True))
+    op.add_column('videos', sa.Column('video_filename', sa.String(), nullable=True))
     # ### end Alembic commands ###
 
 
 def downgrade():
     with op.batch_alter_table("videos") as batch_op:
-        batch_op.drop_column('video_url')
-        batch_op.drop_column('poster_url')
+        batch_op.drop_column('video_filename')
+        batch_op.drop_column('poster_filename')
         batch_op.drop_column('duration')
         batch_op.drop_column('created_at')
         batch_op.drop_column('canonical_url')

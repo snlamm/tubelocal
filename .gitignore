@@ -4,3 +4,7 @@
 *.db
 instance/
 venv/
+config.py
+tubelocal/storage/videos/*
+tubelocal/storage/posters/*
+!.gitkeep

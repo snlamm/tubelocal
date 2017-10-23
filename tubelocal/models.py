@@ -1,11 +1,18 @@
-from sqlalchemy import Table, Column, String, Integer, ForeignKey, DateTime, orm
-from tubelocal import Base
+from sqlalchemy import Table, Column, String, Integer, ForeignKey, DateTime, orm, inspect
+from tubelocal import Base, jsonify
 
 
 class Artist(Base):
     __tablename__ = 'artists'
     id = Column(Integer, primary_key=True)
     name = Column(String)
+
+    def __repr__(self):
+        return "<Artist(name='%s')>" % (self.name)
+
+    def toDict(self, to_json=False):
+        artist_dict = {c.key: getattr(self, c.key) for c in inspect(self).mapper.column_attrs}
+        return jsonify(artist_dict) if to_json else artist_dict
 
 
 # many to many Collection<->Video
@@ -23,8 +30,8 @@ class Video(Base):
     artist_id = Column(Integer, ForeignKey('artists.id'))
     duration = Column(Integer)
     canonical_url = Column(String)
-    poster_url = Column(String)
-    video_url = Column(String)
+    poster_filename = Column(String)
+    video_filename = Column(String)
     created_at = Column(DateTime)
 
     collections = orm.relationship(
@@ -32,6 +39,18 @@ class Video(Base):
         secondary=collection_videos,
         back_populates='videos'
     )
+    artist = orm.relationship('Artist', lazy='joined')
+
+    def __repr__(self):
+        return "<Video(title='%s')>" % (self.title)
+
+    def toDict(self, to_json=False):
+        video_model = {c.key: getattr(self, c.key) for c in inspect(self).mapper.column_attrs}
+
+        if getattr(self, 'artist'):
+            video_model['artist'] = getattr(self, 'artist').toDict()
+
+        return jsonify(video_model) if to_json else video_model
 
 
 class Collection(Base):
