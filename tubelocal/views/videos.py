@@ -119,7 +119,17 @@ def update(video_id):
 @videos.route('/<int:video_id>', methods=['DELETE'])
 def destroy(video_id):
     video_model = find_or_404(Video, video_id)
+    artist_id = video_model.artist_id
     db_session.delete(video_model)
     db_session.commit()
+
+    if not artist_id:
+        return 'success'
+
+    artist_model = Artist.query.get(artist_id)
+
+    if not artist_model.videos:
+        db_session.delete(artist_model)
+        db_session.commit()
 
     return 'success'
