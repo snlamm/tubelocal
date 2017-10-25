@@ -6,6 +6,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from flask_migrate import Migrate
 
 app = Flask(__name__)
+app.url_map.strict_slashes = False
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.root_path, 'tubelocal.db')
 engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'], convert_unicode=True, echo='debug')

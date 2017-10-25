@@ -1,5 +1,5 @@
 from sqlalchemy import Table, Column, String, Integer, ForeignKey, DateTime, orm, inspect
-from tubelocal import Base, jsonify
+from tubelocal import Base, jsonify, abort
 
 
 class Artist(Base):
@@ -37,18 +37,22 @@ class Video(Base):
     collections = orm.relationship(
         'Collection',
         secondary=collection_videos,
-        back_populates='videos'
+        back_populates='videos',
+        lazy='joined'
     )
     artist = orm.relationship('Artist', lazy='joined')
 
     def __repr__(self):
         return "<Video(title='%s')>" % (self.title)
 
-    def toDict(self, to_json=False):
+    def toDict(self, to_json=False, use_eager=True):
         video_model = {c.key: getattr(self, c.key) for c in inspect(self).mapper.column_attrs}
 
         if getattr(self, 'artist'):
             video_model['artist'] = getattr(self, 'artist').toDict()
+
+        if getattr(self, 'collections') and use_eager:
+            video_model['collections'] = [c.toDict(use_eager=False) for c in getattr(self, 'collections')]
 
         return jsonify(video_model) if to_json else video_model
 
@@ -61,5 +65,22 @@ class Collection(Base):
     videos = orm.relationship(
         'Video',
         secondary=collection_videos,
-        back_populates='collections'
+        back_populates='collections',
+        lazy='subquery'
     )
+
+    def __repr__(self):
+        return "<Collection(name='%s')>" % (self.name)
+
+    def toDict(self, to_json=False, use_eager=True):
+        collection_dict = {c: getattr(self, c) for c in ['id', 'name']}
+
+        if getattr(self, 'videos') and use_eager:
+            collection_dict['videos'] = [video.toDict(use_eager=False) for video in getattr(self, 'videos')]
+
+        return jsonify(collection_dict) if to_json else collection_dict
+
+
+def find_or_404(modelClass, model_id):
+    model = modelClass.query.get(model_id)
+    return model if model else abort(404)

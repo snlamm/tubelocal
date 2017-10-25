@@ -1,7 +1,7 @@
 import os
 import datetime
-from tubelocal import Blueprint, request, jsonify, db_session, abort
-from ..models import Video, Artist
+from tubelocal import Blueprint, request, jsonify, db_session
+from ..models import Video, Artist, Collection, find_or_404
 import pafy
 import urllib.request
 
@@ -16,12 +16,7 @@ def index():
 
 @videos.route('/<int:video_id>', methods=['GET'])
 def show(video_id):
-    video_model = Video.query.get(video_id)
-
-    if not video_model:
-        abort(404)
-
-    return video_model.toDict(to_json=True)
+    return find_or_404(Video, video_id).toDict(to_json=True)
 
 
 @videos.route('/', methods=['POST'])
@@ -52,7 +47,6 @@ def create():
 
     if not artist_model:
         artist_model = Artist(name=artist_name)
-        db_session.commit()
 
     # Create the video model
     vid_model = Video(
@@ -96,17 +90,34 @@ def create():
     return vid_model.toDict(to_json=True)
 
 
-# TODO update videos but don't allow changing artist. Allow assigning a collection
-# @videos.route('/videos/<int:id>', methods=[ 'PATCH' ])
-# def update():
-#     return render_template('videos/create.html.j2')
+@videos.route('/<int:video_id>', methods=['PATCH'])
+def update(video_id):
+    video_model = find_or_404(Video, video_id)
+
+    title = request.form.get('title', None)
+    collection_ids_string = request.form.get('collection_ids', None)
+    collection_ids = collection_ids_string.split(',') if collection_ids_string else []
+
+    if title:
+        video_model.title = title
+
+    collections = None
+
+    # Assign multiple collections
+    if collection_ids:
+        collections = Collection.query.filter(Collection.id.in_(collection_ids)).all()
+        video_model.collections.extend(collections)
+
+    if title or collections:
+        db_session.commit()
+
+    return 'success'
 
 
-# TODO allow deleting a video 
-# @videos.route('/videos/<int:id>', methods=[ 'DELETE' ])
-# def destroy():
-#     return render_template('videos/create.html.j2')
+@videos.route('/<int:video_id>', methods=['DELETE'])
+def destroy(video_id):
+    video_model = find_or_404(Video, video_id)
+    db_session.delete(video_model)
+    db_session.commit()
 
-# TODO allow bulk deleting videos
-# TODO allow bulk assigning of videos to collections
-
+    return 'success'
