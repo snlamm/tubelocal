@@ -5,6 +5,8 @@
 instance/
 venv/
 config.py
+tubelocal/static/*
+tubelocal/templates/*
 tubelocal/storage/videos/*
 tubelocal/storage/posters/*
 !.gitkeep

@@ -67,11 +67,13 @@ def create():
     # Attempt to download stream to filepath and update video model with it.
     # On error, delete downloads (and artist) if they were created
     try:
-        # stream.download(quiet=False, filepath=video_storage_path)
-        # urllib.request.urlretrieve(poster_url, poster_storage_path)
+        stream.download(quiet=False, filepath=video_storage_path)
+        urllib.request.urlretrieve(poster_url, poster_storage_path)
+
         vid_model.video_filename = filename
         vid_model.poster_filename = filename
         vid_model.duration = duration_in_seconds
+
         db_session.commit()
     except Exception as err:
         if os.path.isfile(video_storage_path):
