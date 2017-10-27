@@ -12,8 +12,8 @@ A JSON backend api to download and organize youtube videos for viewing offline. 
 ```bash
 virtualenv venv
 . venv/bin/activate
-pip install Flask sqlalchemy flask_migrate pafy youtube-dl
 export FLASK_APP=tubelocal
+pip install -e .
 flask db upgrade
 flask run
 ```
