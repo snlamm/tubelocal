@@ -1,3 +1,4 @@
+import os
 from sqlalchemy import Table, Column, String, Integer, ForeignKey, DateTime, orm, inspect
 from tubelocal import Base, jsonify, abort
 
@@ -49,6 +50,14 @@ class Video(Base):
 
     def __repr__(self):
         return "<Video(title='%s')>" % (self.title)
+
+    def storage_path(self, root_path, filename, to_video=True):
+        filepath = os.path.join(root_path, 'tubelocal/storage')
+
+        if not to_video:
+            return os.path.join(filepath, 'posters/%s' % filename)
+
+        return os.path.join(filepath, 'videos/%s' % filename)
 
     def toDict(self, to_json=False, use_eager=True, get_collections=True):
         video_model = {c.key: getattr(self, c.key) for c in inspect(self).mapper.column_attrs}

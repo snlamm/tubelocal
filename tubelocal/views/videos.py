@@ -1,4 +1,5 @@
 import os
+import webbrowser
 import datetime
 from tubelocal import Blueprint, request, jsonify, db_session
 from ..models import Video, Artist, Collection, find_or_404
@@ -17,6 +18,16 @@ def index():
 @videos.route('/<int:video_id>', methods=['GET'])
 def show(video_id):
     return find_or_404(Video, video_id).toDict(to_json=True)
+
+
+@videos.route('/<int:video_id>/play', methods=['GET'])
+def play(video_id):
+    video_model = find_or_404(Video, video_id)
+    filename = video_model.video_filename
+    video_storage_path = video_model.storage_path(videos.root_path, filename)
+
+    webbrowser.open('file://' + video_storage_path)
+    return 'success'
 
 
 @videos.route('/', methods=['POST'])
@@ -59,10 +70,11 @@ def create():
     db_session.commit()
 
     # Format video and poster filepaths
-    filename = '%d-%d' % (vid_model.id, vid_model.created_at.timestamp())
-    filepath = os.path.join(videos.root_path, 'tubelocal/storage')
-    video_storage_path = os.path.join(filepath, 'videos/%s' % filename)
-    poster_storage_path = os.path.join(filepath, 'posters/%s' % filename)
+    base_filename = '%d-%d' % (vid_model.id, vid_model.created_at.timestamp())
+    video_filename = base_filename + '.mp4'
+    poster_filename = base_filename + '.jpg'
+    video_storage_path = vid_model.storage_path(videos.root_path, video_filename)
+    poster_storage_path = vid_model.storage_path(videos.root_path, poster_filename, to_video=False)
 
     # Attempt to download stream to filepath and update video model with it.
     # On error, delete downloads (and artist) if they were created
@@ -70,8 +82,8 @@ def create():
         stream.download(quiet=False, filepath=video_storage_path)
         urllib.request.urlretrieve(poster_url, poster_storage_path)
 
-        vid_model.video_filename = filename
-        vid_model.poster_filename = filename
+        vid_model.video_filename = video_filename
+        vid_model.poster_filename = poster_filename
         vid_model.duration = duration_in_seconds
 
         db_session.commit()
@@ -118,14 +130,30 @@ def update(video_id):
 
 @videos.route('/<int:video_id>', methods=['DELETE'])
 def destroy(video_id):
+    # Get video model
     video_model = find_or_404(Video, video_id)
     artist_id = video_model.artist_id
+    video_filename = video_model.video_filename
+    poster_filename = video_model.poster_filename
+
+    # Delete model
     db_session.delete(video_model)
     db_session.commit()
+
+    # Remove associated video files
+    video_storage_path = video_model.storage_path(videos.root_path, video_filename)
+    poster_storage_path = video_model.storage_path(videos.root_path, poster_filename, to_video=False)
+
+    if os.path.isfile(video_storage_path):
+        os.remove(video_storage_path)
+
+    if os.path.isfile(poster_storage_path):
+        os.remove(poster_storage_path)
 
     if not artist_id:
         return 'success'
 
+    # Evaluate whether to delete associated Artist model
     artist_model = Artist.query.get(artist_id)
 
     if not artist_model.videos:
